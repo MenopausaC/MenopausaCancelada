@@ -1,0 +1,127 @@
+{
+  "scenario_name": "Questionário Menopausa → Supabase",
+  "description": "Recebe dados do questionário e insere no Supabase",
+  "modules": [
+    {
+      "id": 1,
+      "name": "Webhook - Receber dados",
+      "type": "webhook",
+      "config": {
+        "method": "POST",
+        "url": "https://hook.integromat.com/SEU_WEBHOOK_ID",
+        "response": {
+          "status": 200,
+          "body": {
+            "success": true,
+            "message": "Dados recebidos com sucesso"
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "name": "Supabase - Inserir Lead Principal",
+      "type": "supabase",
+      "config": {
+        "operation": "insert",
+        "table": "leads_menopausa",
+        "data": {
+          "nome": "{{1.lead_data.nome}}",
+          "email": "{{1.lead_data.email}}",
+          "telefone": "{{1.lead_data.telefone}}",
+          "idade": "{{1.lead_data.idade}}",
+          "categoria_sintomas": "{{1.lead_data.categoria_sintomas}}",
+          "pontuacao_total": "{{1.lead_data.pontuacao_total}}",
+          "urgencia": "{{1.lead_data.urgencia}}",
+          "expectativa_melhora": "{{1.lead_data.expectativa_melhora}}",
+          "score_qualificacao": "{{1.lead_data.score_qualificacao}}",
+          "categoria_lead": "{{1.lead_data.categoria_lead}}",
+          "prioridade": "{{1.lead_data.prioridade}}",
+          "motivos_qualificacao": "{{1.lead_data.motivos_qualificacao}}",
+          "tempo_total_questionario": "{{1.lead_data.comportamento.tempo_total_questionario}}",
+          "tempo_medio_resposta": "{{1.lead_data.comportamento.tempo_medio_resposta}}",
+          "voltas_perguntas": "{{1.lead_data.comportamento.voltas_perguntas}}",
+          "engajamento": "{{1.lead_data.comportamento.engajamento}}",
+          "hesitacao_perguntas": "{{1.lead_data.comportamento.hesitacao_perguntas}}",
+          "user_agent": "{{1.lead_data.user_agent}}",
+          "origem": "{{1.lead_data.origem}}",
+          "versao_questionario": "{{1.lead_data.versao_questionario}}"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "name": "Iterator - Sintomas",
+      "type": "iterator",
+      "config": {
+        "array": "{{1.lead_data.sintomas_identificados}}"
+      }
+    },
+    {
+      "id": 4,
+      "name": "Supabase - Inserir Sintomas",
+      "type": "supabase",
+      "config": {
+        "operation": "insert",
+        "table": "sintomas_identificados",
+        "data": {
+          "lead_id": "{{2.id}}",
+          "nome_sintoma": "{{3.nome}}",
+          "urgencia": "{{3.urgencia}}",
+          "explicacao": "{{3.explicacao}}"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "name": "Iterator - Respostas",
+      "type": "iterator",
+      "config": {
+        "array": "{{1.lead_data.respostas_detalhadas}}"
+      }
+    },
+    {
+      "id": 6,
+      "name": "Supabase - Inserir Respostas",
+      "type": "supabase",
+      "config": {
+        "operation": "insert",
+        "table": "respostas_questionario",
+        "data": {
+          "lead_id": "{{2.id}}",
+          "pergunta_id": "{{5.pergunta_id}}",
+          "resposta_texto": "{{5.resposta_texto}}",
+          "pontos": "{{5.pontos}}",
+          "tempo_resposta_ms": "{{5.tempo_resposta_ms}}"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "name": "Filtro - Leads Quentes",
+      "type": "filter",
+      "config": {
+        "condition": "{{2.categoria_lead}} = QUENTE OR {{2.categoria_lead}} = MUITO_QUENTE"
+      }
+    },
+    {
+      "id": 8,
+      "name": "Email - Notificação Lead Quente",
+      "type": "email",
+      "config": {
+        "to": "vendas@suaempresa.com",
+        "subject": "🔥 LEAD QUENTE - {{2.nome}} - Prioridade {{2.prioridade}}",
+        "body": "Nova lead de alta prioridade!\n\nNome: {{2.nome}}\nEmail: {{2.email}}\nTelefone: {{2.telefone}}\nIdade: {{2.idade}}\n\nQualificação: {{2.categoria_lead}}\nScore: {{2.score_qualificacao}}\nPrioridade: {{2.prioridade}}\n\nSintomas: {{2.categoria_sintomas}}\nUrgência: {{2.urgencia}}\n\nMotivos da qualificação:\n{{2.motivos_qualificacao}}\n\nAcesse o Supabase para mais detalhes."
+      }
+    }
+  ],
+  "connections": [
+    { "from": 1, "to": 2 },
+    { "from": 2, "to": 3 },
+    { "from": 3, "to": 4 },
+    { "from": 2, "to": 5 },
+    { "from": 5, "to": 6 },
+    { "from": 2, "to": 7 },
+    { "from": 7, "to": 8 }
+  ]
+}

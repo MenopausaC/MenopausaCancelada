@@ -1,0 +1,44 @@
+{
+  "supabase_field_mapping": {
+    "description": "Mapeamento correto dos campos do Make para Supabase",
+    "table": "QUIZ_DASHBOARD",
+    "mappings": {
+      "nome": "{{1.nome}}",
+      "email": "{{1.email}}",
+      "telefone": "{{1.telefone}}",
+      "idade": "{{1.idade}}",
+      "tempo_total": "{{1.tempo_total}}",
+      "pontuacao_total": "{{1.pontuacao_total}}",
+      "categoria_sintomas": "{{1.categoria_sintomas}}",
+      "urgencia": "{{1.urgencia}}",
+      "prioridade": "{{1.prioridade}}",
+      "origem": "{{1.origem}}",
+      "motivos_qualificacao": "{{toString(1.motivos_qualificacao)}}",
+      "sintomas_identificados": "{{toString(1.sintomas_identificados)}}",
+      "versao_questionario": "{{1.variante}}",
+      "acao": "lead_registrado",
+      "criado_em": "{{now}}"
+    },
+    "required_fields_with_fallbacks": {
+      "nome": "{{if(1.nome; 1.nome; \"Nome não informado\")}}",
+      "email": "{{if(1.email; 1.email; \"email@nao-informado.com\")}}",
+      "origem": "{{if(1.origem; 1.origem; \"questionario-menopausa\")}}",
+      "acao": "lead_registrado"
+    },
+    "data_structure_received": {
+      "example": {
+        "nome": "mARTA",
+        "email": "@",
+        "idade": 55,
+        "tempo_total": 18121,
+        "pontuacao_total": 100,
+        "categoria_sintomas": "Ganho de Peso Descontrolado",
+        "urgencia": "alta",
+        "prioridade": 5,
+        "origem": "testbx4",
+        "motivos_qualificacao": "[\"pergunta\":\"sintoma_principal\",\"resposta\":\"Calores repetitivos e suores\",\"pontos\":6,\"tempo\":1263,\"variante\":\"testbx4\"]",
+        "sintomas_identificados": "Calores repetitivos e suores"
+      }
+    }
+  }
+}

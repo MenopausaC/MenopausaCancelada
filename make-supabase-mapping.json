@@ -1,0 +1,53 @@
+{
+  "webhook_to_supabase_mapping": {
+    "description": "Mapeamento correto dos campos do webhook para o Supabase no Make",
+    "supabase_table": "QUIZ_DASHBOARD",
+    "field_mappings": {
+      "nome": "{{1.dadosContato.nome}}",
+      "email": "{{1.dadosContato.email}}",
+      "telefone": "{{1.dadosContato.telefone}}",
+      "idade": "{{1.dadosContato.idade}}",
+      "categoria_sintomas": "{{1.analise.categoria}}",
+      "pontuacao_total": "{{1.analise.pontuacaoTotal}}",
+      "urgencia": "{{1.analise.urgencia}}",
+      "expectativa_melhora": "{{1.analise.expectativa}}",
+      "score_qualificacao": "{{1.qualificacaoLead.score}}",
+      "categoria_lead": "{{1.qualificacaoLead.categoria}}",
+      "prioridade": "{{1.qualificacaoLead.prioridade}}",
+      "motivos_qualificacao": "{{toString(1.qualificacaoLead.motivos)}}",
+      "sintomas_identificados": "{{toString(1.analise.sintomas)}}",
+      "respostas_detalhadas": "{{toString(1.respostas)}}",
+      "tempo_total_questionario": "{{1.tempoTotal}}",
+      "tempo_medio_resposta": "{{1.qualificacaoLead.comportamento.tempoMedioResposta}}",
+      "voltas_perguntas": "{{1.qualificacaoLead.comportamento.voltasPerguntas}}",
+      "engajamento": "{{1.qualificacaoLead.comportamento.engajamento}}",
+      "hesitacao_perguntas": null,
+      "tempo_tela_final": null,
+      "timestamp": "{{1.timestamp}}",
+      "user_agent": "{{1.userAgent}}",
+      "origem": "{{1.origem}}",
+      "versao_questionario": "{{1.variante}}",
+      "acao": "lead_registrado",
+      "dispositivo": "Desktop",
+      "sistema_operacional": "Windows",
+      "navegador": "Chrome",
+      "resolucao": null,
+      "referrer": null,
+      "utm_source": null,
+      "utm_medium": null,
+      "utm_campaign": null,
+      "ip_address": "{{1.ip_address}}",
+      "criado_em": "{{now}}"
+    },
+    "required_fields": ["nome", "email"],
+    "fallback_values": {
+      "nome": "Nome não informado",
+      "email": "email@nao-informado.com",
+      "telefone": "",
+      "idade": null,
+      "origem": "questionario-menopausa",
+      "versao_questionario": "default",
+      "acao": "lead_registrado"
+    }
+  }
+}
