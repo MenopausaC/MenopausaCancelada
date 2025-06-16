@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
+const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL
+
 // Configuração do Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -113,7 +115,6 @@ function processarDados(dados: any, request: Request) {
     // Qualificação do lead
     score_qualificacao: scoreQualificacao,
     categoria_lead: qualificacaoLead.categoria?.toUpperCase() || null,
-    classificacao_final: qualificacaoLead.classificacaoFinal?.toUpperCase() || null, // Adicionado
     prioridade: prioridade,
     motivos_qualificacao: qualificacaoLead.motivos ? JSON.stringify(qualificacaoLead.motivos) : null,
 
@@ -217,7 +218,6 @@ export async function POST(request: Request) {
       nome: dadosProcessados.nome,
       email: dadosProcessados.email,
       categoria_lead: dadosProcessados.categoria_lead,
-      classificacao_final: dadosProcessados.classificacao_final, // Log da nova classificação
       pontuacao_total: dadosProcessados.pontuacao_total,
       dispositivo: dadosProcessados.dispositivo,
       origem: dadosProcessados.origem,
@@ -226,7 +226,7 @@ export async function POST(request: Request) {
     if (supabase) {
       // Verificar se já existe um lead com o mesmo email (opcional)
       const { data: leadExistente } = await supabase
-        .from("QUIZ_DASHBOARD")
+        .from("QUIZ DASHBOARD")
         .select("id, email, criado_em")
         .eq("email", dadosProcessados.email)
         .order("criado_em", { ascending: false })
@@ -238,7 +238,7 @@ export async function POST(request: Request) {
       }
 
       // Salvar no Supabase
-      const { data, error } = await supabase.from("QUIZ_DASHBOARD").insert([dadosProcessados]).select()
+      const { data, error } = await supabase.from("QUIZ DASHBOARD").insert([dadosProcessados]).select()
 
       if (error) {
         console.error("❌ Erro ao salvar no Supabase:", error)
@@ -261,8 +261,32 @@ export async function POST(request: Request) {
         nome: data[0]?.nome,
         email: data[0]?.email,
         categoria_lead: data[0]?.categoria_lead,
-        classificacao_final: data[0]?.classificacao_final, // Log da nova classificação
       })
+
+      // --- NOVO: Enviar dados para o Make Webhook ---
+      if (makeWebhookUrl) {
+        try {
+          console.log("📤 Enviando dados para Make webhook...")
+          const makeResponse = await fetch(makeWebhookUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(dados), // Envia os dados originais recebidos ou os processados, dependendo da sua necessidade no Make
+          })
+
+          if (makeResponse.ok) {
+            console.log("✅ Dados enviados com sucesso para Make")
+          } else {
+            console.error("❌ Erro ao enviar para Make:", await makeResponse.text())
+          }
+        } catch (makeError) {
+          console.error("❌ Erro ao chamar Make webhook:", makeError)
+        }
+      } else {
+        console.warn("⚠️ MAKE_WEBHOOK_URL não configurado. Dados não enviados para Make.")
+      }
+      // --- FIM NOVO ---
 
       return NextResponse.json({
         success: true,
@@ -275,7 +299,6 @@ export async function POST(request: Request) {
           nome: data[0]?.nome,
           email: data[0]?.email,
           categoria_lead: data[0]?.categoria_lead,
-          classificacao_final: data[0]?.classificacao_final, // Retornar a nova classificação
           pontuacao_total: data[0]?.pontuacao_total,
           urgencia: data[0]?.urgencia,
           dispositivo: data[0]?.dispositivo,
@@ -295,7 +318,6 @@ export async function POST(request: Request) {
           nome: dadosProcessados.nome,
           email: dadosProcessados.email,
           categoria_lead: dadosProcessados.categoria_lead,
-          classificacao_final: dadosProcessados.classificacao_final, // Retornar a nova classificação
           pontuacao_total: dadosProcessados.pontuacao_total,
           urgencia: dadosProcessados.urgencia,
           dispositivo: dadosProcessados.dispositivo,

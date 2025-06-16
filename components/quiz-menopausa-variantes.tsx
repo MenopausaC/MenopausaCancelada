@@ -21,7 +21,7 @@ import {
   Leaf,
 } from "lucide-react"
 import { trackEvent } from "@/lib/tracking-system"
-import { registrarView, registrarLead, type Lead } from "@/lib/supabase"
+import { registrarView } from "@/lib/supabase"
 
 // Tipos e interfaces
 interface Resposta {
@@ -530,81 +530,6 @@ export default function QuizMenopausaVariantes() {
     }
   }
 
-  // Função para enviar dados para o webhook do Make
-  const enviarParaMake = async (leadData: Lead, analiseResult: AnaliseResultado) => {
-    try {
-      console.log("📤 Enviando dados para Make webhook...")
-
-      const makeWebhookUrl = "https://hook.us1.make.com/3lqca8wvfvl6sbhvhyskarl2rkvkpff7"
-
-      const dadosParaMake = {
-        // Dados do contato
-        dadosContato: {
-          nome: leadData.nome,
-          email: leadData.email,
-          telefone: leadData.telefone || "",
-          idade: leadData.idade || "",
-        },
-
-        // Análise completa
-        analise: {
-          categoria: analiseResult.categoria,
-          classificacaoFinal: analiseResult.classificacaoFinal, // Incluir a nova classificação
-          pontuacaoTotal: analiseResult.pontuacaoTotal,
-          descricao: analiseResult.descricao,
-          expectativa: analiseResult.expectativa,
-          recomendacao: analiseResult.recomendacao,
-          urgencia: analiseResult.urgencia,
-          sintomas: analiseResult.sintomas,
-        },
-
-        // Qualificação do lead baseada na pontuação
-        qualificacaoLead: {
-          score: analiseResult.pontuacaoTotal,
-          categoria: analiseResult.categoria, // Manter a categoria original (QUENTE, MORNO, FRIO)
-          classificacaoFinal: analiseResult.classificacaoFinal, // Nova classificação
-          prioridade: analiseResult.pontuacaoTotal > 50 ? 5 : analiseResult.pontuacaoTotal > 30 ? 3 : 1,
-          motivos: analiseResult.sintomas.map((s) => s.nome),
-          comportamento: {
-            tempoMedioResposta: leadData.tempo_total ? leadData.tempo_total / Object.keys(respostas).length : 0,
-            tempoTotalQuestionario: leadData.tempo_total || 0,
-            voltasPerguntas: 0, // Pode ser implementado se necessário
-            engajamento:
-              analiseResult.pontuacaoTotal > 40 ? "ALTO" : analiseResult.pontuacaoTotal > 20 ? "MEDIO" : "BAIXO",
-          },
-        },
-
-        // Respostas detalhadas
-        respostas: respostas,
-
-        // Metadados
-        variante: varianteAtual,
-        tempoTotal: leadData.tempo_total,
-        timestamp: new Date().toISOString(),
-        origem: "questionario-menopausa",
-      }
-
-      const makeResponse = await fetch(makeWebhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(dadosParaMake),
-      })
-
-      if (makeResponse.ok) {
-        console.log("✅ Dados enviados com sucesso para Make")
-        return true
-      } else {
-        console.error("❌ Erro ao enviar para Make:", await makeResponse.text())
-        return false
-      }
-    } catch (error) {
-      console.error("❌ Erro ao enviar dados para Make:", error)
-      return false
-    }
-  }
-
   // Função para registrar lead
   const registrarLeadCompleto = async () => {
     if (leadRegistrado) return // Evita duplicação
@@ -614,33 +539,71 @@ export default function QuizMenopausaVariantes() {
 
     console.log("🔥 REGISTRANDO LEAD COMPLETO")
 
-    const leadData: Lead = {
-      nome: dadosContato.nome,
-      email: dadosContato.email,
-      telefone: dadosContato.telefone,
-      idade: dadosContato.idade,
-      categoria: analiseResult.categoria,
-      classificacao_final: analiseResult.classificacaoFinal, // Salvar a nova classificação
-      pontuacao: analiseResult.pontuacaoTotal,
-      variante: varianteAtual,
-      tempo_total: tempoTotal,
+    const dadosParaWebhook = {
+      // Dados do contato
+      dadosContato: {
+        nome: dadosContato.nome,
+        email: dadosContato.email,
+        telefone: dadosContato.telefone || "",
+        idade: dadosContato.idade || "",
+      },
+
+      // Análise completa
+      analise: {
+        categoria: analiseResult.categoria,
+        classificacaoFinal: analiseResult.classificacaoFinal,
+        pontuacaoTotal: analiseResult.pontuacaoTotal,
+        descricao: analiseResult.descricao,
+        expectativa: analiseResult.expectativa,
+        recomendacao: analiseResult.recomendacao,
+        urgencia: analiseResult.urgencia,
+        sintomas: analiseResult.sintomas,
+      },
+
+      // Qualificação do lead baseada na pontuação
+      qualificacaoLead: {
+        score: analiseResult.pontuacaoTotal,
+        categoria: analiseResult.categoria,
+        classificacaoFinal: analiseResult.classificacaoFinal,
+        prioridade: analiseResult.pontuacaoTotal > 50 ? 5 : analiseResult.pontuacaoTotal > 30 ? 3 : 1,
+        motivos: analiseResult.sintomas.map((s) => s.nome),
+        comportamento: {
+          tempoMedioResposta: tempoTotal / Object.keys(respostas).length,
+          tempoTotalQuestionario: tempoTotal,
+          voltasPerguntas: 0,
+          engajamento:
+            analiseResult.pontuacaoTotal > 40 ? "ALTO" : analiseResult.pontuacaoTotal > 20 ? "MEDIO" : "BAIXO",
+        },
+      },
+
+      // Respostas detalhadas
       respostas: respostas,
-      analise: analiseResult,
+
+      // Metadados
+      variante: varianteAtual,
+      tempoTotal: tempoTotal,
+      timestamp: new Date().toISOString(),
+      origem: "questionario-menopausa",
     }
 
-    // 1. Registrar lead no Supabase (com fallback para localStorage)
-    const leadRegistradoSupabase = await registrarLead(leadData)
+    try {
+      const response = await fetch("/api/webhook", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(dadosParaWebhook),
+      })
 
-    if (leadRegistradoSupabase) {
-      console.log("✅ LEAD REGISTRADO:", leadRegistradoSupabase)
-
-      // 2. Enviar para Make webhook
-      await enviarParaMake(leadData, analiseResult)
-
-      // Marcar como registrado para evitar duplicação
-      setLeadRegistrado(true)
-    } else {
-      console.error("❌ Falha ao registrar lead")
+      if (response.ok) {
+        const result = await response.json()
+        console.log("✅ Lead enviado para o webhook da API com sucesso:", result)
+        setLeadRegistrado(true)
+      } else {
+        console.error("❌ Erro ao enviar lead para o webhook da API:", await response.text())
+      }
+    } catch (error) {
+      console.error("❌ Erro de rede ao enviar lead para o webhook da API:", error)
     }
   }
 
