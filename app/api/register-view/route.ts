@@ -155,4 +155,3 @@ export async function GET() {
     make_view_webhook_configured: !!makeViewWebhookUrl,
   })
 }
-
